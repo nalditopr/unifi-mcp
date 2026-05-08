@@ -31,6 +31,7 @@ PORT_FORWARD_SCHEMA = {
             "description": "Whether rule is initially enabled",
         },
     },
+    "additionalProperties": False,
 }
 
 # Port forwarding rule update schema (all fields optional)
@@ -183,6 +184,7 @@ TRAFFIC_ROUTE_SCHEMA = {
             "description": "Next hop IP address (advanced routing)",
         },
     },
+    "additionalProperties": False,
 }
 
 # Traffic route update schema (derived from above, removes name/interface, makes fields optional)
@@ -227,6 +229,7 @@ TRAFFIC_ROUTE_SIMPLE_SCHEMA = {
         },
         "enabled": {"type": "boolean"},
     },
+    "additionalProperties": False,
 }
 
 # WLAN (Wireless Network) schema
@@ -363,6 +366,7 @@ WLAN_SCHEMA = {
             "then": {"required": ["x_passphrase"]},
         },
     ],
+    "additionalProperties": False,
 }
 
 # WLAN update schema
@@ -543,6 +547,7 @@ NETWORK_SCHEMA = {
             "then": {"required": ["vlan"]},
         }
     ],
+    "additionalProperties": False,
 }
 
 # Network update schema
@@ -562,6 +567,7 @@ VPN_PROFILE_SCHEMA = {
         "server_id": {"type": "string", "description": "ID of the VPN server"},
         "exp": {"type": "integer", "default": 365, "description": "Expiration in days"},
     },
+    "additionalProperties": False,
 }
 
 # FirewallPolicy schema
@@ -605,7 +611,12 @@ FIREWALL_POLICY_SCHEMA = {
             "description": "Whether the policy is enabled",
         },
         "description": {"type": "string", "description": "Description of the rule"},
+        "logging": {
+            "type": "boolean",
+            "description": "Enable logging for matched traffic",
+        },
     },
+    "additionalProperties": False,
 }
 
 # Firewall Policy update schema
@@ -886,7 +897,7 @@ FIREWALL_POLICY_CREATE_SCHEMA = {
             "examples": [False],
         },
     },
-    "additionalProperties": True,  # Allow extra fields initially, tighten later
+    "additionalProperties": False,
 }
 
 # QoS Rule schema
@@ -929,6 +940,7 @@ QOS_RULE_SCHEMA = {
         },
     },
     # Note: UniFi might have more complex targeting (e.g., MAC address, user group) not covered here yet.
+    "additionalProperties": False,
 }
 
 # QoS Rule update schema
@@ -987,6 +999,7 @@ QOS_RULE_SIMPLE_SCHEMA = {
             },
         },
     },
+    "additionalProperties": False,
 }
 
 # ACL Rule validation migrated to pydantic model (models/acl.py) — see #139
@@ -1022,6 +1035,7 @@ PORT_PROFILE_UPDATE_SCHEMA = {
             "description": "802.1X control mode",
         },
     },
+    "additionalProperties": False,
 }
 
 # Client Group update schema
@@ -1035,6 +1049,7 @@ CLIENT_GROUP_UPDATE_SCHEMA = {
             "description": "List of member MAC addresses",
         },
     },
+    "additionalProperties": False,
 }
 
 # Content Filter update schema
@@ -1064,6 +1079,7 @@ CONTENT_FILTER_UPDATE_SCHEMA = {
             "description": "Network IDs this filter applies to",
         },
     },
+    "additionalProperties": False,
 }
 
 # OON Policy update schema
@@ -1089,6 +1105,7 @@ OON_POLICY_UPDATE_SCHEMA = {
         "qos": {"type": "object", "description": "Bandwidth limiting configuration"},
         "route": {"type": "object", "description": "VPN routing configuration"},
     },
+    "additionalProperties": False,
 }
 
 # AP Group create schema
@@ -1108,6 +1125,7 @@ AP_GROUP_SCHEMA = {
             "description": "List of WLAN group IDs to assign to this AP group",
         },
     },
+    "additionalProperties": False,
 }
 
 # AP Group update schema
@@ -1126,6 +1144,7 @@ AP_GROUP_UPDATE_SCHEMA = {
             "description": "List of WLAN group IDs to assign to this AP group",
         },
     },
+    "additionalProperties": False,
 }
 
 # Simplified (high-level) Firewall Policy schema used by the LLM-friendly create tool
@@ -1202,6 +1221,7 @@ FIREWALL_POLICY_SIMPLE_SCHEMA = {
             "default": "all",
         },
     },
+    "additionalProperties": False,
 }
 
 # Simplified (high-level) Port Forward schema used by the LLM-friendly create tool
@@ -1236,6 +1256,7 @@ PORT_FORWARD_SIMPLE_SCHEMA = {
         },
         "enabled": {"type": "boolean", "description": "Enable rule (default true)"},
     },
+    "additionalProperties": False,
 }
 
 
