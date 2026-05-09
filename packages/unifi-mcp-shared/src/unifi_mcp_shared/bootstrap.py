@@ -105,6 +105,61 @@ def load_server_config(
 VALID_REGISTRATION_MODES = {"lazy", "eager", "meta_only"}
 
 
+def assert_credentials_configured(
+    cfg: Any,
+    *,
+    plugin_name: str,
+    env_prefix: str,
+    logger: logging.Logger,
+) -> None:
+    """Refuse to start if no controller host has been configured.
+
+    Empty host is the universal "user hasn't run setup yet" signal — without it
+    every tool call will fail with an unhelpful connection error. Surfacing the
+    problem at startup makes the server appear as failed in ``/mcp`` instead of
+    "connected but every tool errors", which is the most common new-user
+    confusion mode.
+
+    Args:
+        cfg: Loaded OmegaConf config (must have a ``unifi`` section).
+        plugin_name: Human-facing plugin name (e.g. ``"unifi-network"``).
+        env_prefix: Server-specific env prefix without ``UNIFI_`` and trailing
+                    ``_`` (e.g. ``"NETWORK"``).
+        logger: Logger to write the error to.
+
+    Raises:
+        SystemExit: with code 5 when host is unconfigured. The MCP harness will
+                    show the server as failed, which is the desired UX.
+    """
+    host = ""
+    try:
+        host = str(cfg.unifi.get("host", "") or "").strip()
+    except Exception:
+        pass
+
+    if host:
+        return
+
+    var_prefix = f"UNIFI_{env_prefix}_"
+    bar = "=" * 72
+    logger.error(bar)
+    logger.error("[%s] No controller host configured — refusing to start.", plugin_name)
+    logger.error("")
+    logger.error("Set these environment variables before starting the server:")
+    logger.error("  %sHOST=<your-controller-ip-or-hostname>", var_prefix)
+    logger.error("  %sUSERNAME=<local-admin-username>", var_prefix)
+    logger.error("  %sPASSWORD=<local-admin-password>", var_prefix)
+    logger.error("")
+    logger.error("How to set them depends on your runtime:")
+    logger.error("  Claude Code plugin -> run the /setup skill")
+    logger.error("  Docker             -> docker-compose .env or `environment:`")
+    logger.error("  Direct uvx / shell -> export them before launching")
+    logger.error("")
+    logger.error("Then restart the server.")
+    logger.error(bar)
+    raise SystemExit(5)
+
+
 def validate_registration_mode(logger: logging.Logger) -> str:
     """Read and validate UNIFI_TOOL_REGISTRATION_MODE from environment.
 
