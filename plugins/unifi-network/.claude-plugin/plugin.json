@@ -1,6 +1,6 @@
 {
   "name": "unifi-network",
-  "version": "0.15.2",
+  "version": "0.16.0",
   "description": "UniFi Network MCP server \u2014 manage network devices, clients, firewall, VPN, and more",
   "author": {
     "name": "sirkirby",
@@ -18,7 +18,7 @@
     "unifi-network": {
       "command": "uvx",
       "args": [
-        "--python-preference",
+        "--python-preference==0.16.0",
         "system",
         "unifi-network-mcp==0.15.2"
       ],
