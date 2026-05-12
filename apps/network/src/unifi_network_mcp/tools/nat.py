@@ -10,6 +10,19 @@ resource type (`/nat`) covers:
 
 Hairpin NAT is *not* a NAT-rule resource — it is a per-port-forward boolean,
 handled by the port_forwards tools.
+
+Filter shape (`source_filter` / `destination_filter`):
+    {
+        "filter_type": NONE | ADDRESS | PORT | ADDRESS_AND_PORT | NETWORK_CONF,
+        "address": "<cidr>",                       # ADDRESS/ADDRESS_AND_PORT
+        "port": "<port-or-range>",                 # PORT/ADDRESS_AND_PORT
+        "firewall_group_ids": ["<group-id>", ...], # NETWORK_CONF + group refs
+        "invert_address": bool,
+        "invert_port": bool,
+    }
+
+`NETWORK_CONF` selects the networks listed in `firewall_group_ids` rather
+than a CIDR — used by SNAT rules that source-translate a VLAN to a WAN IP.
 """
 
 import logging
@@ -32,6 +45,7 @@ def _summarize_filter(f: Any) -> Dict[str, Any]:
     return {
         "filter_type": f.get("filter_type"),
         "address": f.get("address"),
+        "port": f.get("port"),
         "firewall_group_ids": f.get("firewall_group_ids"),
         "invert_address": f.get("invert_address"),
         "invert_port": f.get("invert_port"),
@@ -186,8 +200,9 @@ async def toggle_nat_rule(
         "exclude (no-NAT flag, default false), logging, rule_index, "
         "setting_preference (auto|manual), pppoe_use_base_interface, "
         "source_filter, destination_filter. Filter shape: "
-        "{filter_type: NONE|ADDRESS|PORT|ADDRESS_AND_PORT, address, port, "
-        "firewall_group_ids, invert_address, invert_port}."
+        "{filter_type: NONE|ADDRESS|PORT|ADDRESS_AND_PORT|NETWORK_CONF, "
+        "address, port, firewall_group_ids, invert_address, invert_port}. "
+        "NETWORK_CONF targets the matching networks via firewall_group_ids."
     ),
     annotations=ToolAnnotations(destructiveHint=False, idempotentHint=False, openWorldHint=False),
 )

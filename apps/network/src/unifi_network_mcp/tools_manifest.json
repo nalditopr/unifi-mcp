@@ -1,5 +1,5 @@
 {
-  "count": 169,
+  "count": 175,
   "generated_by": "scripts/generate_tool_manifest.py",
   "module_map": {
     "unifi_adopt_device": "unifi_network_mcp.tools.devices",
@@ -16,6 +16,7 @@
     "unifi_create_dns_record": "unifi_network_mcp.tools.dns",
     "unifi_create_firewall_group": "unifi_network_mcp.tools.firewall",
     "unifi_create_firewall_policy": "unifi_network_mcp.tools.firewall",
+    "unifi_create_nat_rule": "unifi_network_mcp.tools.nat",
     "unifi_create_network": "unifi_network_mcp.tools.network",
     "unifi_create_oon_policy": "unifi_network_mcp.tools.oon",
     "unifi_create_port_forward": "unifi_network_mcp.tools.port_forwards",
@@ -35,6 +36,7 @@
     "unifi_delete_dns_record": "unifi_network_mcp.tools.dns",
     "unifi_delete_firewall_group": "unifi_network_mcp.tools.firewall",
     "unifi_delete_firewall_policy": "unifi_network_mcp.tools.firewall",
+    "unifi_delete_nat_rule": "unifi_network_mcp.tools.nat",
     "unifi_delete_oon_policy": "unifi_network_mcp.tools.oon",
     "unifi_delete_port_profile": "unifi_network_mcp.tools.switch",
     "unifi_delete_wlan": "unifi_network_mcp.tools.network",
@@ -65,6 +67,7 @@
     "unifi_get_gateway_stats": "unifi_network_mcp.tools.stats",
     "unifi_get_ips_events": "unifi_network_mcp.tools.stats",
     "unifi_get_lldp_neighbors": "unifi_network_mcp.tools.switch",
+    "unifi_get_nat_rule_details": "unifi_network_mcp.tools.nat",
     "unifi_get_network_details": "unifi_network_mcp.tools.network",
     "unifi_get_network_health": "unifi_network_mcp.tools.system",
     "unifi_get_network_stats": "unifi_network_mcp.tools.stats",
@@ -109,6 +112,7 @@
     "unifi_list_firewall_groups": "unifi_network_mcp.tools.firewall",
     "unifi_list_firewall_policies": "unifi_network_mcp.tools.firewall",
     "unifi_list_firewall_zones": "unifi_network_mcp.tools.firewall",
+    "unifi_list_nat_rules": "unifi_network_mcp.tools.nat",
     "unifi_list_networks": "unifi_network_mcp.tools.network",
     "unifi_list_oon_policies": "unifi_network_mcp.tools.oon",
     "unifi_list_port_forwards": "unifi_network_mcp.tools.port_forwards",
@@ -139,6 +143,7 @@
     "unifi_subscribe_events": "unifi_network_mcp.tools.events",
     "unifi_toggle_device": "unifi_network_mcp.tools.devices",
     "unifi_toggle_firewall_policy": "unifi_network_mcp.tools.firewall",
+    "unifi_toggle_nat_rule": "unifi_network_mcp.tools.nat",
     "unifi_toggle_oon_policy": "unifi_network_mcp.tools.oon",
     "unifi_toggle_port_forward": "unifi_network_mcp.tools.port_forwards",
     "unifi_toggle_qos_rule_enabled": "unifi_network_mcp.tools.qos",
@@ -157,6 +162,7 @@
     "unifi_update_dns_record": "unifi_network_mcp.tools.dns",
     "unifi_update_firewall_group": "unifi_network_mcp.tools.firewall",
     "unifi_update_firewall_policy": "unifi_network_mcp.tools.firewall",
+    "unifi_update_nat_rule": "unifi_network_mcp.tools.nat",
     "unifi_update_network": "unifi_network_mcp.tools.network",
     "unifi_update_oon_policy": "unifi_network_mcp.tools.oon",
     "unifi_update_port_forward": "unifi_network_mcp.tools.port_forwards",
@@ -643,6 +649,33 @@
           },
           "required": [
             "policy_data"
+          ],
+          "type": "object"
+        }
+      }
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false
+      },
+      "description": "Create a NAT rule (SNAT, DNAT, or NAT exception) on your Unifi Network controller. Required: type (SNAT|DNAT), description. Common optional fields: ip_address (translation target), in_interface (DNAT incoming iface ID), out_interface (SNAT egress iface ID), protocol (udp|tcp|tcp_udp|all), port (top-level port mirror), ip_version (IPV4|IPV6, default IPV4), enabled (default true), exclude (no-NAT flag, default false), logging, rule_index, setting_preference (auto|manual), pppoe_use_base_interface, source_filter, destination_filter. Filter shape: {filter_type: NONE|ADDRESS|PORT|ADDRESS_AND_PORT|NETWORK_CONF, address, port, firewall_group_ids, invert_address, invert_port}. NETWORK_CONF targets the matching networks via firewall_group_ids.",
+      "name": "unifi_create_nat_rule",
+      "schema": {
+        "input": {
+          "properties": {
+            "confirm": {
+              "description": "When true, creates the rule. When false (default), returns a preview of the changes.",
+              "type": "boolean"
+            },
+            "rule": {
+              "description": "NAT rule configuration dict. Required: type (SNAT|DNAT), description. See tool description for the full field reference.",
+              "type": "object"
+            }
+          },
+          "required": [
+            "rule"
           ],
           "type": "object"
         }
@@ -1311,6 +1344,33 @@
           },
           "required": [
             "policy_id"
+          ],
+          "type": "object"
+        }
+      }
+    },
+    {
+      "annotations": {
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": false
+      },
+      "description": "Delete a NAT rule by ID. Returns a preview unless confirm=true.",
+      "name": "unifi_delete_nat_rule",
+      "schema": {
+        "input": {
+          "properties": {
+            "confirm": {
+              "description": "When true, deletes the rule. When false (default), returns a preview of the change.",
+              "type": "boolean"
+            },
+            "rule_id": {
+              "description": "Unique identifier (_id) of the NAT rule to delete (from unifi_list_nat_rules)",
+              "type": "string"
+            }
+          },
+          "required": [
+            "rule_id"
           ],
           "type": "object"
         }
@@ -2012,6 +2072,28 @@
           },
           "required": [
             "device_mac"
+          ],
+          "type": "object"
+        }
+      }
+    },
+    {
+      "annotations": {
+        "openWorldHint": false,
+        "readOnlyHint": true
+      },
+      "description": "Get the full raw configuration of a NAT rule by its ID.",
+      "name": "unifi_get_nat_rule_details",
+      "schema": {
+        "input": {
+          "properties": {
+            "rule_id": {
+              "description": "Unique identifier (_id) of the NAT rule (from unifi_list_nat_rules)",
+              "type": "string"
+            }
+          },
+          "required": [
+            "rule_id"
           ],
           "type": "object"
         }
@@ -2894,6 +2976,25 @@
         "openWorldHint": false,
         "readOnlyHint": true
       },
+      "description": "List NAT rules (SNAT, DNAT, 1:1 NAT, NAT exceptions) on your Unifi Network controller. System / predefined rules are excluded by default.",
+      "name": "unifi_list_nat_rules",
+      "schema": {
+        "input": {
+          "properties": {
+            "include_predefined": {
+              "description": "Include system-defined NAT rules. False (default) returns only user-configurable rules.",
+              "type": "boolean"
+            }
+          },
+          "type": "object"
+        }
+      }
+    },
+    {
+      "annotations": {
+        "openWorldHint": false,
+        "readOnlyHint": true
+      },
       "description": "Returns all configured networks (LAN, WAN, VLAN-only) with name, purpose, IP subnet, VLAN ID, DHCP settings, and enabled state. Use to understand network topology and VLAN layout. For a single network's full config, use unifi_get_network_details. For wireless SSIDs, use unifi_list_wlans.",
       "name": "unifi_list_networks",
       "schema": {
@@ -3641,6 +3742,33 @@
       "annotations": {
         "destructiveHint": false,
         "idempotentHint": false,
+        "openWorldHint": false
+      },
+      "description": "Toggle a NAT rule's enabled state on or off. Returns a preview unless confirm=true.",
+      "name": "unifi_toggle_nat_rule",
+      "schema": {
+        "input": {
+          "properties": {
+            "confirm": {
+              "description": "When true, executes the toggle. When false (default), returns a preview of the changes.",
+              "type": "boolean"
+            },
+            "rule_id": {
+              "description": "Unique identifier (_id) of the NAT rule to toggle (from unifi_list_nat_rules)",
+              "type": "string"
+            }
+          },
+          "required": [
+            "rule_id"
+          ],
+          "type": "object"
+        }
+      }
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
         "openWorldHint": false,
         "readOnlyHint": false
       },
@@ -4256,6 +4384,38 @@
           "required": [
             "policy_id",
             "update_data"
+          ],
+          "type": "object"
+        }
+      }
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false
+      },
+      "description": "Update specific fields of an existing NAT rule. Returns a preview unless confirm=true. Allowed fields: description, enabled, exclude, logging, ip_version, type, ip_address, out_interface, rule_index, source_filter, destination_filter. Nested filter dicts are merged, so you can patch a single sub-field.",
+      "name": "unifi_update_nat_rule",
+      "schema": {
+        "input": {
+          "properties": {
+            "confirm": {
+              "description": "When true, applies the update. When false (default), returns a preview of the changes.",
+              "type": "boolean"
+            },
+            "rule_id": {
+              "description": "Unique identifier (_id) of the NAT rule to update (from unifi_list_nat_rules)",
+              "type": "string"
+            },
+            "updates": {
+              "description": "Dictionary of fields to update. See tool description for allowed keys.",
+              "type": "object"
+            }
+          },
+          "required": [
+            "rule_id",
+            "updates"
           ],
           "type": "object"
         }
