@@ -170,8 +170,7 @@ async def toggle_nat_rule(
                 resource_type="nat_rule",
                 resource_id=rule_id,
                 resource_name=rule_name,
-                current_state=current_state,
-                new_state=new_state,
+                current_enabled=current_state,
             )
 
         ok = await firewall_manager.toggle_nat_rule(rule_id)
@@ -356,7 +355,7 @@ async def update_nat_rule(
                 resource_type="nat_rule",
                 resource_id=rule_id,
                 resource_name=rule_name,
-                current=existing,
+                current_state=existing,
                 updates=updates,
             )
 
