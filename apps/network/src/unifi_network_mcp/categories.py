@@ -37,6 +37,7 @@ NETWORK_CATEGORY_MAP = {
     "guest": "guests",
     "traffic_route": "traffic_routes",
     "port_forward": "port_forwards",
+    "nat_rule": "nat_rules",
     "event": "events",
     "voucher": "vouchers",
     "usergroup": "usergroups",

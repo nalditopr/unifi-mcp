@@ -19,6 +19,7 @@ CACHE_PREFIX_TRAFFIC_ROUTES = "traffic_routes"
 CACHE_PREFIX_PORT_FORWARDS = "port_forwards"
 CACHE_PREFIX_FIREWALL_ZONES = "firewall_zones"
 CACHE_PREFIX_FIREWALL_GROUPS = "firewall_groups"
+CACHE_PREFIX_NAT_RULES = "nat_rules"
 
 
 class FirewallManager:
@@ -855,4 +856,186 @@ class FirewallManager:
             return True
         except Exception as e:
             logger.error("Error deleting firewall group %s: %s", group_id, e, exc_info=True)
+            raise
+
+    # ---- NAT Rules (V2 API: /nat) ----
+    #
+    # The V2 NAT endpoint exposes user-configurable network address translation
+    # rules. A single rule resource models SNAT, DNAT, 1:1 NAT (paired
+    # SNAT+DNAT), and NAT exceptions (`exclude=True`). Hairpin NAT is a
+    # per-port-forward field and is handled in the port_forwards tools.
+    #
+    # Fields of interest on a NAT rule dict:
+    #   _id, description, enabled, exclude, logging, ip_version (IPV4/IPV6),
+    #   type (SNAT/DNAT), ip_address, out_interface, rule_index, is_predefined,
+    #   source_filter, destination_filter (filter shape: filter_type
+    #   NONE|ADDRESS|PORT|ADDRESS_AND_PORT, address, firewall_group_ids,
+    #   invert_address, invert_port).
+
+    async def get_nat_rules(self, include_predefined: bool = False) -> List[Dict[str, Any]]:
+        """Get NAT rules from the controller.
+
+        Args:
+            include_predefined: When False (default), filters out system rules
+                where `is_predefined` is true.
+
+        Returns:
+            List of NAT rule dictionaries.
+        """
+        cache_key = f"{CACHE_PREFIX_NAT_RULES}_{include_predefined}_{self._connection.site}"
+        cached = self._connection.get_cached(cache_key)
+        if cached is not None:
+            return cached
+
+        if not await self._connection.ensure_connected():
+            raise ConnectionError("Not connected to controller")
+        try:
+            api_request = ApiRequestV2(method="get", path="/nat")
+            resp = await self._connection.request(api_request)
+            data = (
+                resp
+                if isinstance(resp, list)
+                else resp.get("data", [])
+                if isinstance(resp, dict)
+                else []
+            )
+            if not include_predefined:
+                data = [r for r in data if not (isinstance(r, dict) and r.get("is_predefined"))]
+            self._connection._update_cache(cache_key, data)
+            return data
+        except Exception as e:
+            logger.error("Error fetching NAT rules: %s", e, exc_info=True)
+            raise
+
+    async def get_nat_rule_by_id(self, rule_id: str) -> Dict[str, Any]:
+        """Get a single NAT rule by ID.
+
+        Raises:
+            UniFiNotFoundError: If the rule does not exist.
+        """
+        # The V2 NAT detail endpoint exists but the list payload is small and
+        # uniform, so we match the patterns used elsewhere in this manager
+        # (e.g. port forwards) and resolve from the cached list. This keeps
+        # behaviour consistent and avoids one extra request per lookup.
+        rules = await self.get_nat_rules(include_predefined=True)
+        match = next(
+            (r for r in rules if isinstance(r, dict) and r.get("_id") == rule_id),
+            None,
+        )
+        if match is None:
+            raise UniFiNotFoundError("nat_rule", rule_id)
+        return match
+
+    async def create_nat_rule(self, rule_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """Create a new NAT rule via V2 API.
+
+        Args:
+            rule_data: Dict containing at minimum `type` (SNAT|DNAT) and
+                `description`. Typical optional fields: ip_version,
+                ip_address, out_interface, source_filter, destination_filter,
+                enabled, exclude, logging.
+
+        Returns:
+            The created rule dict (or None on failure to extract from response).
+        """
+        if not await self._connection.ensure_connected():
+            raise ConnectionError("Not connected to controller")
+
+        if not rule_data.get("type"):
+            logger.error("Missing required field 'type' (SNAT|DNAT) for NAT rule")
+            return None
+
+        try:
+            api_request = ApiRequestV2(method="post", path="/nat", data=rule_data)
+            response = await self._connection.request(api_request)
+            self._connection._invalidate_cache(f"{CACHE_PREFIX_NAT_RULES}_True_{self._connection.site}")
+            self._connection._invalidate_cache(f"{CACHE_PREFIX_NAT_RULES}_False_{self._connection.site}")
+
+            if isinstance(response, dict):
+                return response.get("data", [response])[0] if response.get("data") else response
+            if isinstance(response, list) and response:
+                return response[0]
+            return None
+        except Exception as e:
+            logger.error("Error creating NAT rule: %s", e, exc_info=True)
+            raise
+
+    async def update_nat_rule(self, rule_id: str, updates: Dict[str, Any]) -> bool:
+        """Apply a partial update to a NAT rule.
+
+        Fetches the existing rule, merges `updates`, and PUTs the full payload
+        back to the V2 endpoint. Same pattern used for port_forwards.
+
+        Args:
+            rule_id: The `_id` of the rule.
+            updates: Dict of fields to overlay on the existing rule.
+
+        Returns:
+            True on success.
+
+        Raises:
+            UniFiNotFoundError: If the rule does not exist.
+        """
+        if not await self._connection.ensure_connected():
+            raise ConnectionError("Not connected to controller")
+        if not updates:
+            logger.warning("No updates provided for NAT rule %s.", rule_id)
+            return True
+
+        try:
+            existing = await self.get_nat_rule_by_id(rule_id)
+            updated_data = copy.deepcopy(existing)
+            # Nested filter dicts are merged so callers can patch a single
+            # field (e.g. enabled toggle, description rename, or a single
+            # filter_type change) without resending the whole rule.
+            for key, value in updates.items():
+                if (
+                    isinstance(value, dict)
+                    and isinstance(updated_data.get(key), dict)
+                ):
+                    updated_data[key] = deep_merge(updated_data[key], value)
+                else:
+                    updated_data[key] = value
+
+            api_request = ApiRequestV2(method="put", path=f"/nat/{rule_id}", data=updated_data)
+            await self._connection.request(api_request)
+            self._connection._invalidate_cache(f"{CACHE_PREFIX_NAT_RULES}_True_{self._connection.site}")
+            self._connection._invalidate_cache(f"{CACHE_PREFIX_NAT_RULES}_False_{self._connection.site}")
+            return True
+        except UniFiNotFoundError:
+            raise
+        except Exception as e:
+            logger.error("Error updating NAT rule %s: %s", rule_id, e, exc_info=True)
+            raise
+
+    async def toggle_nat_rule(self, rule_id: str) -> bool:
+        """Flip a NAT rule's `enabled` flag.
+
+        Returns:
+            True on success.
+
+        Raises:
+            UniFiNotFoundError: If the rule does not exist.
+        """
+        existing = await self.get_nat_rule_by_id(rule_id)
+        new_state = not bool(existing.get("enabled", False))
+        return await self.update_nat_rule(rule_id, {"enabled": new_state})
+
+    async def delete_nat_rule(self, rule_id: str) -> bool:
+        """Delete a NAT rule.
+
+        Returns:
+            True on success.
+        """
+        if not await self._connection.ensure_connected():
+            raise ConnectionError("Not connected to controller")
+
+        try:
+            api_request = ApiRequestV2(method="delete", path=f"/nat/{rule_id}")
+            await self._connection.request(api_request)
+            self._connection._invalidate_cache(f"{CACHE_PREFIX_NAT_RULES}_True_{self._connection.site}")
+            self._connection._invalidate_cache(f"{CACHE_PREFIX_NAT_RULES}_False_{self._connection.site}")
+            return True
+        except Exception as e:
+            logger.error("Error deleting NAT rule %s: %s", rule_id, e, exc_info=True)
             raise
